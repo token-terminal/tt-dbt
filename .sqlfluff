@@ -1,0 +1,163 @@
+[sqlfluff]
+exclude_rules = L014, L034, L054, L032, LT07, ST03, AL09
+max_line_length = 120
+# The following justifies why we exclude these rules.
+# L014:
+#    Was changing column names in the following way:
+#    - transactionHash -> transactionhash
+#    - blockTimestamp  -> blocktimestamp
+# L034:
+#    Breaks "logical ordering" of columns. E.g. timestamps (typically the leftmost column) were often
+#    moved to the middle of the table -> takes extra mental effort when looking at query results.
+# L054:
+#    We like using column names (i.e. explicit references) on `order by` statements and column indices
+#    (i.e. implicit references) on `group by` statements, especially when grouping by 3+ columns.
+#    This rule is ignored as it prevents using multiple types of references.
+
+# verbose is an integer (0-2) indicating the level of log output
+verbose = 0
+
+nocolor = False
+dialect = bigquery
+templater = dbt
+rules = all
+
+output_line_length = 120
+ignore_templated_areas = True
+encoding = utf-8
+
+large_file_skip_byte_limit = 20000000
+processes = 0
+
+
+
+[sqlfluff:indentation]
+# See https://docs.sqlfluff.com/en/stable/indentation.html
+indented_joins = False
+indented_ctes = False
+indented_using_on = True
+template_blocks_indent = True
+tab_space_size = 4
+indent_unit = space
+
+[sqlfluff:templater]
+unwrap_wrapped_queries = True
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = True
+
+[sqlfluff:templater:jinja:macros]
+# Macros provided as builtins for dbt projects
+dbt_ref = {% macro ref(model_ref) %}{{model_ref}}{% endmacro %}
+dbt_source = {% macro source(source_name, table) %}{{source_name}}_{{table}}{% endmacro %}
+dbt_config = {% macro config() %}{% for k in kwargs %}{% endfor %}{% endmacro %}
+dbt_var = {% macro var(variable, default='') %}item{% endmacro %}
+dbt_is_incremental = {% macro is_incremental() %}True{% endmacro %}
+
+[sqlfluff:templater:dbt]
+project_dir = /usr/app/dbt/
+profiles_dir = ~/.dbt
+target = dev
+
+
+[sqlfluff:rules:capitalisation.functions] # Function names
+extended_capitalisation_policy = lower
+ignore_words = None
+
+[sqlfluff:rules:capitalisation.literals] # Null & Boolean Literals
+capitalisation_policy = lower
+ignore_words = None
+
+# Some rules have their own specific config
+[sqlfluff:rules:layout.operators]
+operator_new_lines = after
+
+[sqlfluff:rules:aliasing.table]
+# Aliasing preference for tables
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+# Aliasing preference for columns
+aliasing = explicit
+
+[sqlfluff:rules:layout.long_lines]
+# Line length
+ignore_comment_lines = False
+ignore_comment_clauses = False
+
+[sqlfluff:rules:references.from]
+# References must be in FROM clause
+# Disabled for some dialects (e.g. bigquery)
+force_enable = False
+
+[sqlfluff:rules:references.consistent]
+# References must be consistently used
+# Disabled for some dialects (e.g. bigquery)
+force_enable = False
+
+[sqlfluff:rules:capitalisation.keywords]
+unquoted_identifiers_policy = aliases
+quoted_identifiers_policy = none
+ignore_words = chain, version, name, value, timestamp, data
+capitalisation_policy = lower
+
+[sqlfluff:rules:aliasing.length]
+min_alias_length = 4
+max_alias_length = 100
+
+[sqlfluff:rules:aliasing.forbid]
+# Avoid table aliases in from clauses and join conditions.
+# Disabled for some dialects (e.g. bigquery)
+force_enable = False
+
+[sqlfluff:rules:structure.subquery]
+# By default, allow subqueries in from clauses, but not join clauses
+forbid_subquery_in = join
+
+[sqlfluff:rules:convention.select_trailing_comma]
+# Trailing commas
+select_clause_trailing_comma = require
+
+[sqlfluff:rules:convention.count_rows]
+# Consistent syntax to count all rows
+prefer_count_1 = False
+prefer_count_0 = False
+
+[sqlfluff:rules:ambiguous.join]
+# Fully qualify JOIN clause
+fully_qualify_join_types = inner
+
+[sqlfluff:rules:convention.terminator]
+# Semi-colon formatting approach
+multiline_newline = False
+require_final_semicolon = False
+
+[qlfluff:rules:references.special_chars]
+unquoted_identifiers_policy = all
+quoted_identifiers_policy = all
+allow_space_in_identifier = False
+additional_allowed_characters = ""
+ignore_words = None
+
+[sqlfluff:rules:references.quoting]
+# Policy on quoted and unquoted identifiers
+prefer_quoted_identifiers = False
+ignore_words = None
+[sqlfluff:rules:references.keywords]
+ignore_words = chain, version, name, value, timestamp, data
+
+[sqlfluff:rules:convention.blocked_words]
+blocked_words = None
+
+[sqlfluff:rules:references.qualification]
+# Comma separated list of words to ignore for this rule
+ignore_words = table_name, table_schema, ordinal_position, _dbt_max_partition, last_modified_time
+ignore_words_regex = None
+
+[sqlfluff:rules:layout.spacing]
+# Ensure spaces around comparison operators
+comma_style = both
+
+[sqlfluff:rules:convention.quoted_literals]
+# Ensure single quotes are used primarily
+preferred_quoted_literal_style = single_quotes
