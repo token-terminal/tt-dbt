@@ -49,7 +49,7 @@ jobs:
             type=ref,event=branch
 
       - name: Log in to the Container registry
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         # v3.3.0 head SHA https://github.com/docker/login-action/commits/v3.3.0
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
         with:
@@ -63,7 +63,7 @@ jobs:
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
