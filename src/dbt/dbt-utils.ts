@@ -24,8 +24,8 @@ function isAppleSiliconMac(): boolean {
 }
 
 export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluff", _dbtDir: string) {
-  const splitIndex = argv.indexOf(command);
-  const dbtArgs = argv.slice(splitIndex + 1);
+  const splitIndex = command === "dbt" ? 2 : 3;
+  const dbtArgs = argv.slice(splitIndex);
   const dbtDir = process.cwd();
   if (command === "sqlfluff") {
     dbtArgs.splice(1, 0, "--config");
@@ -35,6 +35,7 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
       dbtArgs.splice(2, 0, ".sqlfluff.local");
     }
   }
+  debug(`All args: ${argv}`);
   debug(`DB command: ${command}`);
   debug(`DBT Dir: ${dbtDir}`);
   debug(`DBT Args: ${dbtArgs.join(" ")}`);
