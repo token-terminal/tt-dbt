@@ -46,8 +46,6 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
 
   // use platform linux/arm64 if on Apple Silicon
   const dockerArgsPlatform = isAppleSiliconMac() ? ["--platform", "linux/amd64"] : [];
-  //    'ghcr.io/dbt-labs/dbt-bigquery:1.8.2',
-  // console.log(`DEBUG: ${dbtDir}, ${userHome}`)
 
   const dockerArgs = ["run", "--rm", "--network=host", `--mount`, `type=bind,source=${dbtDir},target=/usr/app/dbt`];
   if (process.env.CI) {
@@ -85,7 +83,8 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
       reject(new Error(`Failed to start Docker process: ${err.message}`));
     });
   });
-  return await runner;
+
+  return runner;
 }
 
 export async function testDocker() {

@@ -1,19 +1,19 @@
 #!/bin/bash
 
-set -euo pipefail
+set -euox pipefail
 
 # Build using Bun cross-compiling to other platforms
-
 TARGET_PLATFORMS=(linux-x64 linux-arm64 darwin-x64 darwin-arm64)
 BIN_DIR=./bin
 RELEASES_DIR=./releases
+BUN_BIN=$(which bun)
 
 mkdir -p $BIN_DIR
 mkdir -p $RELEASES_DIR
 
 for platform in "${TARGET_PLATFORMS[@]}"; do
   echo "Building for $platform"
-  bun build ./index.ts --minify --compile --sourcemap --target=bun-"$platform" --outfile "${BIN_DIR}/tt-dbt"
+  env -i "$BUN_BIN" build ./index.ts --minify --compile --sourcemap --target=bun-"$platform" --outfile "${BIN_DIR}/tt-dbt"
   gzip -9 -N -c "${BIN_DIR}/tt-dbt" > "${RELEASES_DIR}/tt-dbt-${platform}.gz"
   echo "Done building for $platform, release at  ${RELEASES_DIR}/tt-dbt-${platform}.gz"
 done

@@ -4,13 +4,15 @@ Single binary DBT docker wrapper with Token Terminal configurations.
 
 ## Install
 
-1. Download binary from github releases and extract (eg. `gzip -d -N ./releases/tt-dbt-darwin-arm64.gz`) or build binary from source.
+1. Download binary from github releases and extract (eg. `gzip -d -N ./path/to/downloaded/file`) or build binary from source.
 
-2. Add binary to PATH eg. `sudo mv ./tt-dbt /usr/local/bin`
+2. Add execution rights for the binary `chmod +x /path/to/extracted/binary`.
 
-3. Run `tt-dbt test-installation`
+3. Add binary to PATH eg. `sudo mv /path/to/extracted/binary /usr/local/bin`
 
-4. You can now run DBT with Token Terminal configuration in any DBT folder
+4. Run `tt-dbt test-installation`
+
+5. You can now run DBT with Token Terminal configuration in any DBT folder
 
 ## Usage
 
@@ -49,6 +51,22 @@ To build all platforms:
 
 ```bash
 ./build.sh
+```
+
+## Automatic releases
+
+Releasing binaries can be done by pushing version tag to repo.
+
+```
+git tag -a v0.1.0 -m "Initial release"
+git push origin v0.1.0
+```
+
+Releasing new version of docker runtime.
+
+```
+git tag -a docker/v1.0.0 -m "Initial DBT runtime docker release"
+git push origin docker/v1.0.0
 ```
 
 ## Manual release
