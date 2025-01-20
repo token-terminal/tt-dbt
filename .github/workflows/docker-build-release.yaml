@@ -57,6 +57,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - id: "auth"
+        uses: "google-github-actions/auth@v0"
+        with:
+          credentials_json: "${{ secrets.GCP_KEY }}"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v0"
+
+      - name: "Use gcloud CLI"
+        run: "gcloud info"
+      - name: "Gcloud docker auth"
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
       - name: Build and push
         id: push
         # https://github.com/docker/build-push-action/commits/v6.9.0
