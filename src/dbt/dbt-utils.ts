@@ -7,7 +7,7 @@ import Debug from "debug";
 const debug = Debug("tt-dbt:runwithdocker");
 
 // Define the Docker image to use, use major for now
-const dbtImage = `ghcr.io/token-terminal/tt-dbt:1.1.0`;
+const dbtImage = `ghcr.io/token-terminal/tt-dbt:1.1.2`;
 
 function isAppleSiliconMac(): boolean {
   const arch = os.arch();
