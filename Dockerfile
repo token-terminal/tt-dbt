@@ -1,4 +1,5 @@
-FROM ghcr.io/dbt-labs/dbt-bigquery:1.9.0
+FROM us-central1-docker.pkg.dev/tt-infra/tt-infra/tt-bq:2025-01-20b
+#FROM ghcr.io/dbt-labs/dbt-bigquery:1.9.0
 
 LABEL org.opencontainers.image.source=https://github.com/token-terminal/tt-dbt
 LABEL org.opencontainers.image.description="Token Terminal DBT runtime"
