@@ -53,33 +53,67 @@ jobs:
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
 
-      - name: Prepare macOS Binaries
+      - name: Create macOS App Bundles
         if: runner.os == 'macOS'
         run: |
-          # Make binaries executable
-          chmod +x ./releases/tt-dbt-darwin-arm64
-          chmod +x ./releases/tt-dbt-darwin-x64
+          for arch in arm64 x64; do
+            # Create app bundle structure
+            BUNDLE_DIR="./releases/tt-dbt-darwin-$arch.app"
+            mkdir -p "$BUNDLE_DIR/Contents/MacOS"
+            mkdir -p "$BUNDLE_DIR/Contents/Resources"
+            
+            # Move binary to app bundle
+            mv "./releases/tt-dbt-darwin-$arch" "$BUNDLE_DIR/Contents/MacOS/tt-dbt"
+            chmod +x "$BUNDLE_DIR/Contents/MacOS/tt-dbt"
+            
+            # Create Info.plist
+            cat > "$BUNDLE_DIR/Contents/Info.plist" << EOF
+               <?xml version="1.0" encoding="UTF-8"?>
+               <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+               <plist version="1.0">
+               <dict>
+                   <key>CFBundlePackageType</key>
+                   <string>APPL</string>
+                   <key>CFBundleExecutable</key>
+                   <string>tt-dbt</string>
+                   <key>CFBundleIdentifier</key>
+                   <string>com.tokenterminal.tt-dbt</string>
+                   <key>CFBundleName</key>
+                   <string>tt-dbt</string>
+                   <key>CFBundleShortVersionString</key>
+                   <string>1.0.0</string>
+                   <key>CFBundleVersion</key>
+                   <string>1</string>
+                   <key>LSMinimumSystemVersion</key>
+                   <string>10.10.0</string>
+               </dict>
+               </plist>
+            EOF
+          done
 
-      - name: Sign macOS Binaries
+      - name: Sign macOS Bundles
         if: runner.os == 'macOS'
         run: |
-          # Sign both arm64 and x64 binaries
-          codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-arm64
-          codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-x64
+          # Sign both arm64 and x64 bundles
+          for arch in arm64 x64; do
+            # First sign the binary inside the bundle
+            codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" "./releases/tt-dbt-darwin-$arch.app/Contents/MacOS/tt-dbt"
+            # Then sign the whole bundle
+            codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" "./releases/tt-dbt-darwin-$arch.app"
+          done
 
-      - name: Notarize macOS Binaries
+      - name: Notarize macOS Bundles
         if: runner.os == 'macOS'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          # Create a ZIP for notarization
           for arch in arm64 x64; do
-            echo "Notarizing tt-dbt-darwin-$arch..."
+            echo "Notarizing tt-dbt-darwin-$arch.app..."
             
-            # Create zip
-            ditto -c -k --keepParent "./releases/tt-dbt-darwin-$arch" "./releases/tt-dbt-darwin-$arch.zip"
+            # Create zip of the app bundle
+            ditto -c -k --keepParent "./releases/tt-dbt-darwin-$arch.app" "./releases/tt-dbt-darwin-$arch.zip"
             
             # Submit for notarization and wait for result
             xcrun notarytool submit "./releases/tt-dbt-darwin-$arch.zip" \
@@ -88,19 +122,19 @@ jobs:
               --team-id "$APPLE_TEAM_ID" \
               --wait
             
-            # Staple the notarization ticket
-            xcrun stapler staple "./releases/tt-dbt-darwin-$arch"
+            # Staple the notarization ticket to the app bundle
+            xcrun stapler staple "./releases/tt-dbt-darwin-$arch.app"
             
             # Clean up zip
             rm "./releases/tt-dbt-darwin-$arch.zip"
           done
 
-      - name: Compress macOS Binaries
+      - name: Compress macOS Bundles
         if: runner.os == 'macOS'
         run: |
-          # Compress the signed and notarized binaries
+          # Compress the signed and notarized bundles
           for arch in arm64 x64; do
-            gzip -9 -N -c "./releases/tt-dbt-darwin-$arch" > "./releases/tt-dbt-darwin-$arch.gz"
+            ditto -c -k --keepParent "./releases/tt-dbt-darwin-$arch.app" "./releases/tt-dbt-darwin-$arch.gz"
           done
 
       - name: Create release
@@ -116,7 +150,7 @@ jobs:
               --generate-notes \
               ./releases/*.gz
 
-      - name: Upload macOS Binaries
+      - name: Upload macOS Bundles
         if: runner.os == 'macOS'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
