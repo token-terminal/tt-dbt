@@ -47,18 +47,31 @@ jobs:
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
           
-      - name: Sign macOS Binary
+      - name: Sign macOS Binaries
         if: runner.os == 'macOS'
         run: |
-          codesign --force --options runtime --sign "Developer ID Application" ./releases/tt-dbt-macos
+          # Sign both arm64 and x64 binaries
+          codesign --force --options runtime --sign "Developer ID Application" ./releases/tt-dbt-darwin-arm64
+          codesign --force --options runtime --sign "Developer ID Application" ./releases/tt-dbt-darwin-x64
           
-      - name: Notarize macOS Binary
+      - name: Notarize macOS Binaries
         if: runner.os == 'macOS'
         env:
           APPLE_USER_ID: ${{ secrets.APPLE_USER_ID }}
         run: |
-          xcrun notarytool submit ./releases/tt-dbt-macos --apple-id "$APPLE_USER_ID" --keychain-profile "notary-profile" --wait
-          xcrun stapler staple ./releases/tt-dbt-macos
+          # Notarize and staple both arm64 and x64 binaries
+          for arch in arm64 x64; do
+            xcrun notarytool submit "./releases/tt-dbt-darwin-$arch" --apple-id "$APPLE_USER_ID" --keychain-profile "notary-profile" --wait
+            xcrun stapler staple "./releases/tt-dbt-darwin-$arch"
+          done
+          
+      - name: Compress macOS Binaries
+        if: runner.os == 'macOS'
+        run: |
+          # Compress the signed and notarized binaries
+          for arch in arm64 x64; do
+            gzip -9 -N -c "./releases/tt-dbt-darwin-$arch" > "./releases/tt-dbt-darwin-$arch.gz"
+          done
           
       - name: Create release
         if: runner.os == 'Linux'
@@ -73,10 +86,10 @@ jobs:
               --generate-notes \
               ./releases/*.gz
               
-      - name: Upload macOS Binary
+      - name: Upload macOS Binaries
         if: runner.os == 'macOS'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
         run: |
-          gh release upload "$tag" ./releases/tt-dbt-macos
+          gh release upload "$tag" ./releases/tt-dbt-darwin-*.gz
