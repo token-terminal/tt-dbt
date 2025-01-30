@@ -1,23 +1,56 @@
 # tt-dbt
 
-Single binary DBT docker wrapper with Token Terminal configurations.
+Single binary DBT wrapper with Token Terminal configurations.
 
 ## Install
 
-1. Download binary from github releases and extract (eg. `gzip -d -N ./path/to/downloaded/file`) or build binary from source.
+### macOS
 
-2. Add execution rights for the binary `chmod +x /path/to/extracted/binary`.
-2. a) before it's signed run `xattr -d com.apple.quarantine /path/to/extracted/binary` to remove quarantine flag
+1. Download the appropriate binary for your system from GitHub releases:
+   - For Apple Silicon (M1/M2): `tt-dbt-darwin-arm64.gz`
+   - For Intel Macs: `tt-dbt-darwin-x64.gz`
 
-3. Add binary to PATH eg. `sudo mv /path/to/extracted/binary /usr/local/bin`
+2. Extract the binary:
+   ```bash
+   gzip -d tt-dbt-darwin-*.gz
+   ```
 
-4. Run `tt-dbt test-installation`
+3. Make it executable:
+   ```bash
+   chmod +x tt-dbt-darwin-*
+   ```
 
-5. You can now run DBT with Token Terminal configuration in any DBT folder
+4. Move to a location in your PATH:
+   ```bash
+   sudo mv tt-dbt-darwin-* /usr/local/bin/tt-dbt
+   ```
+
+5. Verify installation:
+   ```bash
+   tt-dbt test-installation
+   ```
+
+### Linux
+
+1. Download the appropriate binary for your system:
+   - For x64 systems: `tt-dbt-linux-x64.gz`
+   - For ARM64 systems: `tt-dbt-linux-arm64.gz`
+
+2. Extract and install:
+   ```bash
+   gzip -d tt-dbt-linux-*.gz
+   chmod +x tt-dbt-linux-*
+   sudo mv tt-dbt-linux-* /usr/local/bin/tt-dbt
+   ```
+
+3. Verify installation:
+   ```bash
+   tt-dbt test-installation
+   ```
 
 ## Usage
 
-Run DBT commands normally
+Run DBT commands normally:
 
 ```bash
 # Run normal DBT commands
@@ -30,28 +63,39 @@ tt-dbt sqlfluff lint path/to/model
 tt-dbt help
 ```
 
-## Building
+## Building from Source
 
-Single binary is built using [Bun](https://bun.sh).
+The binary is built using Node.js and pkg.
 
-[Install Bun](https://bun.sh/docs/installation).
+1. Install Node.js 18 or later
 
-Install dependencies:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Build for all platforms:
+   ```bash
+   ./build.sh
+   ```
+
+   This will create binaries for:
+   - Linux (x64, arm64)
+   - macOS (x64, arm64)
+
+   The binaries will be in the `releases` directory.
+
+4. For development builds, you can also run directly with Node.js:
+   ```bash
+   node index.ts
+   ```
+
+## Security
+
+The macOS binaries are signed with our Developer ID certificate and notarized by Apple, ensuring they can be run without security warnings. If you build from source, you may need to remove the quarantine attribute:
 
 ```bash
-bun install
-```
-
-To build single platform:
-
-```bash
-bun build ./index.ts --minify --compile --sourcemap  --target=bun-darwin-arm64 --outfile ./bin/tt-dbt
-```
-
-To build all platforms:
-
-```bash
-./build.sh
+xattr -d com.apple.quarantine /usr/local/bin/tt-dbt
 ```
 
 ## Automatic releases
@@ -76,4 +120,3 @@ Example releasing `v0.1.0`.
 
 ```bash
 ./build.sh && gh release create v0.1.0 --title="tt-dbt 0.1.0" --generate-notes ./releases/*.gz
-```

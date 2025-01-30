@@ -5,12 +5,15 @@ set -euox pipefail
 # Build using pkg to create native binaries
 BIN_DIR=./bin
 RELEASES_DIR=./releases
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 mkdir -p $BIN_DIR
 mkdir -p $RELEASES_DIR
 
 # Install pkg if not already installed
-npm install -g pkg
+if ! command -v pkg &> /dev/null; then
+    npm install -g pkg
+fi
 
 # Build for all platforms
 echo "Building binaries using pkg..."
@@ -26,9 +29,16 @@ mv "$BIN_DIR/tt-dbt-linux-arm64" "$RELEASES_DIR/tt-dbt-linux-arm64"
 mv "$BIN_DIR/tt-dbt-macos-x64" "$RELEASES_DIR/tt-dbt-darwin-x64"
 mv "$BIN_DIR/tt-dbt-macos-arm64" "$RELEASES_DIR/tt-dbt-darwin-arm64"
 
-# Compress Linux binaries
-gzip -9 -N -c "$RELEASES_DIR/tt-dbt-linux-x64" > "$RELEASES_DIR/tt-dbt-linux-x64.gz"
-gzip -9 -N -c "$RELEASES_DIR/tt-dbt-linux-arm64" > "$RELEASES_DIR/tt-dbt-linux-arm64.gz"
+# Handle platform-specific packaging
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # On macOS, run the packaging script
+    chmod +x "$SCRIPT_DIR/scripts/package-macos.sh"
+    "$SCRIPT_DIR/scripts/package-macos.sh"
+else
+    # On Linux, just compress the binaries
+    gzip -9 -N -c "$RELEASES_DIR/tt-dbt-linux-x64" > "$RELEASES_DIR/tt-dbt-linux-x64.gz"
+    gzip -9 -N -c "$RELEASES_DIR/tt-dbt-linux-arm64" > "$RELEASES_DIR/tt-dbt-linux-arm64.gz"
+fi
 
 echo "Done building for all platforms"
 
