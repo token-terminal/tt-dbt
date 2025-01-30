@@ -2,29 +2,33 @@
 
 set -euox pipefail
 
-# Build using Bun cross-compiling to other platforms
-TARGET_PLATFORMS=(linux-x64 linux-arm64 darwin-x64 darwin-arm64)
+# Build using pkg to create native binaries
 BIN_DIR=./bin
 RELEASES_DIR=./releases
-BUN_BIN=$(which bun)
 
 mkdir -p $BIN_DIR
 mkdir -p $RELEASES_DIR
 
-for platform in "${TARGET_PLATFORMS[@]}"; do
-  echo "Building for $platform"
-  env -i "$BUN_BIN" build ./index.ts --minify --compile --sourcemap --target=bun-"$platform" --outfile "${BIN_DIR}/tt-dbt"
-  
-  # For macOS platforms, just copy the binary to releases without compression
-  if [[ $platform == darwin* ]]; then
-    cp "${BIN_DIR}/tt-dbt" "${RELEASES_DIR}/tt-dbt-${platform}"
-    echo "Done building for $platform, binary at ${RELEASES_DIR}/tt-dbt-${platform}"
-  else
-    # For non-macOS platforms, compress as before
-    gzip -9 -N -c "${BIN_DIR}/tt-dbt" > "${RELEASES_DIR}/tt-dbt-${platform}.gz"
-    echo "Done building for $platform, release at ${RELEASES_DIR}/tt-dbt-${platform}.gz"
-  fi
-done
+# Install pkg if not already installed
+npm install -g pkg
+
+# Build for all platforms
+echo "Building binaries using pkg..."
+
+# Build for different platforms
+pkg ./index.ts \
+  --targets node18-linux-x64,node18-linux-arm64,node18-macos-x64,node18-macos-arm64 \
+  --output $BIN_DIR/tt-dbt
+
+# Move and rename binaries to releases directory
+mv "$BIN_DIR/tt-dbt-linux-x64" "$RELEASES_DIR/tt-dbt-linux-x64"
+mv "$BIN_DIR/tt-dbt-linux-arm64" "$RELEASES_DIR/tt-dbt-linux-arm64"
+mv "$BIN_DIR/tt-dbt-macos-x64" "$RELEASES_DIR/tt-dbt-darwin-x64"
+mv "$BIN_DIR/tt-dbt-macos-arm64" "$RELEASES_DIR/tt-dbt-darwin-arm64"
+
+# Compress Linux binaries
+gzip -9 -N -c "$RELEASES_DIR/tt-dbt-linux-x64" > "$RELEASES_DIR/tt-dbt-linux-x64.gz"
+gzip -9 -N -c "$RELEASES_DIR/tt-dbt-linux-arm64" > "$RELEASES_DIR/tt-dbt-linux-arm64.gz"
 
 echo "Done building for all platforms"
 
