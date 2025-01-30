@@ -3,7 +3,6 @@ name: Create release
 # Required secrets:
 # - APPLE_CERTIFICATE: Base64-encoded Developer ID certificate (p12 file)
 # - APPLE_CERTIFICATE_PASSWORD: Password for the certificate
-# - APPLE_USER_ID: Apple ID used for notarization
 # - GITHUB_TOKEN: Automatically provided by GitHub
 
 permissions:
@@ -65,28 +64,10 @@ jobs:
           codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-arm64
           codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-x64
           
-      - name: Notarize macOS Binaries
-        if: runner.os == 'macOS'
-        env:
-          APPLE_USER_ID: ${{ secrets.APPLE_USER_ID }}
-        run: |
-          # Create a ZIP for notarization (Apple requires zip for notarization)
-          ditto -c -k --keepParent ./releases/tt-dbt-darwin-arm64 ./releases/tt-dbt-darwin-arm64.zip
-          ditto -c -k --keepParent ./releases/tt-dbt-darwin-x64 ./releases/tt-dbt-darwin-x64.zip
-          
-          # Notarize both binaries
-          for arch in arm64 x64; do
-            xcrun notarytool submit "./releases/tt-dbt-darwin-$arch.zip" --apple-id "$APPLE_USER_ID" --keychain-profile "notary-profile" --wait
-            # Remove the zip after notarization
-            rm "./releases/tt-dbt-darwin-$arch.zip"
-            # Staple the original binary
-            xcrun stapler staple "./releases/tt-dbt-darwin-$arch"
-          done
-          
       - name: Compress macOS Binaries
         if: runner.os == 'macOS'
         run: |
-          # Compress the signed and notarized binaries
+          # Compress the signed binaries
           for arch in arm64 x64; do
             gzip -9 -N -c "./releases/tt-dbt-darwin-$arch" > "./releases/tt-dbt-darwin-$arch.gz"
           done
