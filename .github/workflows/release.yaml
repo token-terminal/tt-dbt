@@ -4,6 +4,7 @@ name: Create release
 # - APPLE_CERTIFICATE: Base64-encoded Developer ID certificate (p12 file)
 # - APPLE_CERTIFICATE_PASSWORD: Password for the certificate
 # - APPLE_ID: Apple ID email
+# - APPLE_TEAM_ID: Your Apple Developer Team ID
 # - APPLE_APP_SPECIFIC_PASSWORD: App-specific password for Apple ID
 # - GITHUB_TOKEN: Automatically provided by GitHub
 
@@ -70,22 +71,24 @@ jobs:
         if: runner.os == 'macOS'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
           # Create a ZIP for notarization
           for arch in arm64 x64; do
+            echo "Notarizing tt-dbt-darwin-$arch..."
+            
             # Create zip
             ditto -c -k --keepParent "./releases/tt-dbt-darwin-$arch" "./releases/tt-dbt-darwin-$arch.zip"
             
-            # Submit for notarization
-            xcrun altool --notarize-app \
-              --primary-bundle-id "com.tokenterminal.tt-dbt.$arch" \
-              --username "$APPLE_ID" \
+            # Submit for notarization and wait for result
+            xcrun notarytool submit "./releases/tt-dbt-darwin-$arch.zip" \
+              --apple-id "$APPLE_ID" \
               --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-              --file "./releases/tt-dbt-darwin-$arch.zip"
-              
-            # Wait for notarization to complete and staple
-            sleep 60  # Give some time for notarization to process
+              --team-id "$APPLE_TEAM_ID" \
+              --wait
+            
+            # Staple the notarization ticket
             xcrun stapler staple "./releases/tt-dbt-darwin-$arch"
             
             # Clean up zip
