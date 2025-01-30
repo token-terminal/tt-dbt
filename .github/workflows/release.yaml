@@ -44,8 +44,9 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          chmod +x ./package-macos.sh
-          ./package-macos.sh
+          chmod +x ./build.sh
+          chmod +x ./scripts/package-macos.sh
+          ./build.sh
 
       - name: Build Linux binaries
         if: runner.os == 'Linux'

@@ -32,8 +32,8 @@ mv "$BIN_DIR/tt-dbt-macos-arm64" "$RELEASES_DIR/tt-dbt-darwin-arm64"
 # Handle platform-specific packaging
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # On macOS, run the packaging script
-    chmod +x "$SCRIPT_DIR/scripts/package-macos.sh"
-    "$SCRIPT_DIR/scripts/package-macos.sh"
+    chmod +x "$SCRIPT_DIR/../scripts/package-macos.sh"
+    "$SCRIPT_DIR/../scripts/package-macos.sh" --ci
 else
     # On Linux, just compress the binaries
     gzip -9 -N -c "$RELEASES_DIR/tt-dbt-linux-x64" > "$RELEASES_DIR/tt-dbt-linux-x64.gz"
