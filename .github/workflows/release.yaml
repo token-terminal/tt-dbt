@@ -47,12 +47,19 @@ jobs:
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
           
+      - name: Prepare macOS Binaries
+        if: runner.os == 'macOS'
+        run: |
+          # Make binaries executable
+          chmod +x ./releases/tt-dbt-darwin-arm64
+          chmod +x ./releases/tt-dbt-darwin-x64
+          
       - name: Sign macOS Binaries
         if: runner.os == 'macOS'
         run: |
           # Sign both arm64 and x64 binaries
-          codesign --force --options runtime --sign "Developer ID Application" ./releases/tt-dbt-darwin-arm64
-          codesign --force --options runtime --sign "Developer ID Application" ./releases/tt-dbt-darwin-x64
+          codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-arm64
+          codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-x64
           
       - name: Notarize macOS Binaries
         if: runner.os == 'macOS'
