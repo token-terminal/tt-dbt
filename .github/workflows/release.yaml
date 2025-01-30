@@ -25,21 +25,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          
+          node-version: "18"
+
       - name: Install dependencies
         run: |
           npm install
           npm install -g pkg
-          
+
       - name: Build command
         run: |
           ./build.sh
-          
+
       - name: Import Apple Certificate
         if: runner.os == 'macOS'
         env:
@@ -52,21 +52,21 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
-          
+
       - name: Prepare macOS Binaries
         if: runner.os == 'macOS'
         run: |
           # Make binaries executable
           chmod +x ./releases/tt-dbt-darwin-arm64
           chmod +x ./releases/tt-dbt-darwin-x64
-          
+
       - name: Sign macOS Binaries
         if: runner.os == 'macOS'
         run: |
           # Sign both arm64 and x64 binaries
           codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-arm64
           codesign --force --options runtime,library --timestamp --strict --sign "Developer ID Application" ./releases/tt-dbt-darwin-x64
-          
+
       - name: Notarize macOS Binaries
         if: runner.os == 'macOS'
         env:
@@ -94,7 +94,7 @@ jobs:
             # Clean up zip
             rm "./releases/tt-dbt-darwin-$arch.zip"
           done
-          
+
       - name: Compress macOS Binaries
         if: runner.os == 'macOS'
         run: |
@@ -102,7 +102,7 @@ jobs:
           for arch in arm64 x64; do
             gzip -9 -N -c "./releases/tt-dbt-darwin-$arch" > "./releases/tt-dbt-darwin-$arch.gz"
           done
-          
+
       - name: Create release
         if: runner.os == 'Linux'
         env:
@@ -115,7 +115,7 @@ jobs:
               --title="${repository#*/} ${tag#v}" \
               --generate-notes \
               ./releases/*.gz
-              
+
       - name: Upload macOS Binaries
         if: runner.os == 'macOS'
         env:
