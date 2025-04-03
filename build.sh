@@ -13,9 +13,10 @@ mkdir -p $RELEASES_DIR
 
 for platform in "${TARGET_PLATFORMS[@]}"; do
   echo "Building for $platform"
-  env -i "$BUN_BIN" build ./index.ts --minify --compile --sourcemap --target=bun-"$platform" --outfile "${BIN_DIR}/tt-dbt"
-  gzip -9 -N -c "${BIN_DIR}/tt-dbt" > "${RELEASES_DIR}/tt-dbt-${platform}.gz"
-  echo "Done building for $platform, release at  ${RELEASES_DIR}/tt-dbt-${platform}.gz"
+  arch_dir="${BIN_DIR}/tt-dbt-${platform}"
+  mkdir -p "$arch_dir"
+  env -i "$BUN_BIN" build ./index.ts --minify --compile --sourcemap --target=bun-"$platform" --outfile "$arch_dir/tt-dbt"
+  echo "Done building binary at $arch_dir/tt-dbt"
 done
 
 echo "Done building for all platforms"
