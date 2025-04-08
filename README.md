@@ -7,7 +7,6 @@ Single binary DBT docker wrapper with Token Terminal configurations.
 1. Download binary from github releases and extract (eg. `gzip -d -N ./path/to/downloaded/file`) or build binary from source.
 
 2. Add execution rights for the binary `chmod +x /path/to/extracted/binary`.
-2. a) before it's signed run `xattr -d com.apple.quarantine /path/to/extracted/binary` to remove quarantine flag
 
 3. Add binary to PATH eg. `sudo mv /path/to/extracted/binary /usr/local/bin`
 
