@@ -23,9 +23,14 @@ function isAppleSiliconMac(): boolean {
   return false;
 }
 
-export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluff", _dbtDir: string) {
+export async function runWithDBTDocker(
+  argv: string[],
+  command: "dbt" | "sqlfluff",
+  _dbtDir: string,
+  extraArgs?: string[]
+) {
   const splitIndex = command === "dbt" ? 2 : 3;
-  const dbtArgs = argv.slice(splitIndex);
+  const dbtArgs = extraArgs || argv.slice(splitIndex);
   const dbtDir = process.cwd();
   if (command === "sqlfluff") {
     dbtArgs.splice(1, 0, "--config");
@@ -45,11 +50,34 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
   //console.log(`DbtDIR: ${dbtDir}, ${userHome}, argv: ${argv}`)
 
   // use platform linux/arm64 if on Apple Silicon
-  const dockerArgsPlatform = isAppleSiliconMac() ? ["--platform", "linux/amd64"] : [];
+  const dockerArgsPlatform = isAppleSiliconMac()
+    ? ["--platform", "linux/amd64"]
+    : [];
   //    'ghcr.io/dbt-labs/dbt-bigquery:1.8.2',
   // console.log(`DEBUG: ${dbtDir}, ${userHome}`)
 
-  const dockerArgs = ["run", "--rm", "--network=host", `--mount`, `type=bind,source=${dbtDir},target=/usr/app/dbt`];
+  // Check if we're running "dbt docs serve" command
+  const isDocsServe =
+    command === "dbt" &&
+    dbtArgs.length >= 2 &&
+    dbtArgs[0] === "docs" &&
+    dbtArgs[1] === "serve";
+
+  // For docs serve, don't use host networking so port mapping works
+  const networkArgs = isDocsServe
+    ? [] // No network flag for docs serve to allow port mapping
+    : ["--network=host"];
+
+  const dockerArgs = ["run", "--rm", ...networkArgs];
+
+  // If running docs serve, add port mapping
+  if (isDocsServe) {
+    dockerArgs.push("-p", "8080:8080");
+  }
+
+  // Add volume mounts
+  dockerArgs.push(`--mount`, `type=bind,source=${dbtDir},target=/usr/app/dbt`);
+
   if (process.env.CI) {
     //dockerArgs.push(...[`--mount`, `type=bind,readonly,source=${join(userHome, '.dbt')},target=/root/.dbt`])
   } else {
@@ -58,7 +86,11 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
         `--mount`,
         `type=bind,readonly,source=${join(userHome, ".dbt")},target=/root/.dbt`,
         `--mount`,
-        `type=bind,readonly,source=${join(userHome, ".config", "gcloud")},target=/root/.config/gcloud`,
+        `type=bind,readonly,source=${join(
+          userHome,
+          ".config",
+          "gcloud"
+        )},target=/root/.config/gcloud`,
       ]
     );
   }
@@ -67,11 +99,14 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
     dockerArgs.push(...[`-e`, `BQ_KEY_FILE=${process.env.BQ_KEY_FILE}`]);
   }
 
-  dockerArgs.push(...[...dockerArgsPlatform, dbtImage, command, ...dbtArgs]);
+  dockerArgs.push(...dockerArgsPlatform, dbtImage, command, ...dbtArgs);
   debug(`full command: \`docker ${dockerArgs.join(" ")}\``);
 
   const runner = new Promise((resolve, reject) => {
-    const dockerProcess = spawn("docker", dockerArgs, { stdio: "inherit", env: process.env });
+    const dockerProcess = spawn("docker", dockerArgs, {
+      stdio: "inherit",
+      env: process.env,
+    });
 
     dockerProcess.on("close", (code) => {
       if (code !== 0) {
@@ -90,7 +125,9 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
 
 export async function testDocker() {
   const runner = new Promise((resolve, reject) => {
-    const dockerProcess = spawn("docker", ["info"], { stdio: ["ignore", "pipe", "pipe"] });
+    const dockerProcess = spawn("docker", ["info"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stdErr = "";
     let stdOut = "";
 
@@ -134,7 +171,9 @@ export async function pullDBTImage() {
     let stdErr = "";
     let stdOut = "";
 
-    const dockerProcess = spawn("docker", ["pull", dbtImage], { stdio: ["ignore", "pipe", "pipe"] });
+    const dockerProcess = spawn("docker", ["pull", dbtImage], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
 
     dockerProcess.stdout.on("data", (data) => {
       stdOut += data.toString();
