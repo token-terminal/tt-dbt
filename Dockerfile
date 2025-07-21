@@ -46,7 +46,6 @@ COPY .sqlfluff /usr/app/.sqlfluff
 
 ENTRYPOINT  []
 RUN touch ~/.bigqueryrc
-COPY tt_dbt-linux-x64 /bin/tt_dbt
 CMD ["echo", "define command manually!!"]
 
 
