@@ -1,51 +1,74 @@
-ARG py_version=3.11.2
+# syntax=docker/dockerfile:1.6
+ARG PY_VERSION=3.11.2
 
-FROM python:$py_version-slim-bullseye AS base
+########################
+# 1 ─── Builder stage ──
+########################
+FROM python:${PY_VERSION}-slim-bullseye AS builder
 
-RUN apt-get update \
-  && apt-get dist-upgrade -y \
-  && apt-get install -y --no-install-recommends \
-    build-essential=12.9 \
-    ca-certificates=20210119 \
-    git=1:2.30.2-1+deb11u2 \
-    make=4.3-4.1 \
-    openssh-client=1:8.4p1-5+deb11u3 \
-    software-properties-common=0.96.20.2-2.1 \
-  && apt-get clean \
-  && rm -rf \
-    /var/lib/apt/lists/* \
-    /tmp/* \
-    /var/tmp/*
+# Exclude docs/man at *build* time too (saves ≈70 MB)
+RUN printf "path-exclude /usr/share/man/*\n\
+path-exclude /usr/share/doc/*\n\
+path-exclude /usr/share/doc-base/*\n" \
+    > /etc/dpkg/dpkg.cfg.d/01_nodocs
 
-ENV PYTHONIOENCODING=utf-8
-ENV LANG=C.UTF-8
+# Build‑time system deps
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential git curl gettext
 
-RUN python -m pip install --upgrade "pip==24.0" "setuptools==69.2.0" "wheel==0.43.0" --no-cache-dir
+# Create and pre‑activate a dedicated venv
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 
-FROM base AS dbt-bigquery
+# Python tooling + DBT stack (no wheel cache, no .pyc)
+RUN pip install --upgrade --no-cache-dir --no-compile \
+        pip==24.0 setuptools==69.2.0 wheel==0.43.0 && \
+    pip install --no-cache-dir --no-compile \
+        dbt-bigquery==1.10.0 \
+        sqlfluff==3.3.0 \
+        sqlfluff-templater-dbt==3.3.0
 
-HEALTHCHECK CMD dbt --version || exit 1
+# Remove tests, __pycache__, *.pyc from venv
+RUN find /opt/venv \( -name tests -o -name '__pycache__' \
+                      -o -name '*.py[co]' \) -prune -exec rm -rf '{}' +
 
-WORKDIR /usr/app/dbt/
+########################
+# 2 ─── Runtime stage ─
+########################
+FROM python:${PY_VERSION}-slim-bullseye AS runtime
 
-RUN python -m pip install --upgrade "sqlfluff==3.3.0" "sqlfluff-templater-dbt==3.3.0" --no-cache-dir
-RUN python -m pip install dbt-bigquery==1.10.0
+# Keep the doc/man exclusion in the final image
+RUN printf "path-exclude /usr/share/man/*\n\
+path-exclude /usr/share/doc/*\n\
+path-exclude /usr/share/doc-base/*\n" \
+    > /etc/dpkg/dpkg.cfg.d/01_nodocs
 
+ENV PATH="/opt/venv/bin:${PATH}" \
+    PYTHONIOENCODING=utf-8 \
+    LANG=C.UTF-8
 
-LABEL org.opencontainers.image.source=https://github.com/token-terminal/tt-dbt
-LABEL org.opencontainers.image.description="Token Terminal DBT runtime"
+# --- Minimal Google Cloud CLI (core + bq, no kubectl, no App Engine) ---
+RUN set -e; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
+    curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz && \
+    tar -xf google-cloud-cli-linux-x86_64.tar.gz && \
+    rm google-cloud-cli-linux-x86_64.tar.gz && \
+    /google-cloud-sdk/install.sh --quiet && \
+    rm -rf /google-cloud-sdk  /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN apt update && apt install gettext curl -y
+# Copy the prepared virtual‑env from the builder
+COPY --from=builder /opt/venv /opt/venv
 
-RUN curl https://sdk.cloud.google.com | bash && \
-    echo "source /root/google-cloud-sdk/path.bash.inc" >> ~/.bashrc && \
-    echo "source /root/google-cloud-sdk/completion.bash.inc" >> ~/.bashrc && \
-    touch ~/.bigqueryrc
-
+# Project files / configuration
+WORKDIR /usr/app/dbt
 COPY .sqlfluff /usr/app/.sqlfluff
 
-ENTRYPOINT  []
-RUN touch ~/.bigqueryrc
+# Health‑check & defaults
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s \
+  CMD dbt --version || exit 1
+
+ENTRYPOINT []
 CMD ["echo", "define command manually!!"]
-
-
