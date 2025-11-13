@@ -15,48 +15,61 @@ function isAppleSiliconMac(): boolean {
   const cpus = os.cpus();
 
   // Check if the architecture is arm64 and platform is darwin (macOS)
-  if (arch === "arm64" && platform === "darwin") {
+  if (arch === 'arm64' && platform === 'darwin') {
     // Additional check for specific Apple Silicon CPUs
-    const isAppleSilicon = cpus.some((cpu) => cpu.model.includes("Apple"));
+    const isAppleSilicon = cpus.some(cpu => cpu.model.includes('Apple'));
     return isAppleSilicon;
   }
   return false;
 }
 
-export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluff", _dbtDir: string) {
-  const splitIndex = command === "dbt" ? 2 : 3;
+export async function runWithDBTDocker(
+  argv: string[],
+  command: 'dbt' | 'sqlfluff',
+  _dbtDir: string
+) {
+  const splitIndex = command === 'dbt' ? 2 : 3;
   const dbtArgs = argv.slice(splitIndex);
   const dbtDir = process.cwd();
-  if (command === "sqlfluff") {
-    dbtArgs.splice(1, 0, "--config");
+  if (command === 'sqlfluff') {
+    dbtArgs.splice(1, 0, '--config');
     if (process.env.CI) {
-      dbtArgs.splice(2, 0, ".sqlfluff.ci");
+      dbtArgs.splice(2, 0, '.sqlfluff.ci');
     } else {
-      dbtArgs.splice(2, 0, ".sqlfluff.local");
+      dbtArgs.splice(2, 0, '.sqlfluff.local');
     }
   }
   debug(`All args: ${argv}`);
   debug(`DB command: ${command}`);
   debug(`DBT Dir: ${dbtDir}`);
-  debug(`DBT Args: ${dbtArgs.join(" ")}`);
+  debug(`DBT Args: ${dbtArgs.join(' ')}`);
 
   // Define the Docker command
   const userHome = os.homedir();
   //console.log(`DbtDIR: ${dbtDir}, ${userHome}, argv: ${argv}`)
 
   // use platform linux/arm64 if on Apple Silicon
-  const dockerArgsPlatform = isAppleSiliconMac() ? ["--platform", "linux/amd64"] : [];
+  const dockerArgsPlatform = isAppleSiliconMac() ? ['--platform', 'linux/amd64'] : [];
 
-  const dockerArgs = ["run", "--rm", "--network=host", `--mount`, `type=bind,source=${dbtDir},target=/usr/app/dbt`];
+  // Add --user $(id -u):$(id -g)
+  const dockerArgs = [
+    'run',
+    '--rm',
+    '--network=host',
+    `--mount`,
+    `type=bind,source=${dbtDir},target=/usr/app/dbt`,
+    '--user',
+    `${os.userInfo().uid}:${os.userInfo().gid}`,
+  ];
   if (process.env.CI) {
     //dockerArgs.push(...[`--mount`, `type=bind,readonly,source=${join(userHome, '.dbt')},target=/root/.dbt`])
   } else {
     dockerArgs.push(
       ...[
         `--mount`,
-        `type=bind,readonly,source=${join(userHome, ".dbt")},target=/root/.dbt`,
+        `type=bind,readonly,source=${join(userHome, '.dbt')},target=/root/.dbt`,
         `--mount`,
-        `type=bind,readonly,source=${join(userHome, ".config", "gcloud")},target=/root/.config/gcloud`,
+        `type=bind,readonly,source=${join(userHome, '.config', 'gcloud')},target=/root/.config/gcloud`,
       ]
     );
   }
