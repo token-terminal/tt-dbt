@@ -51,7 +51,7 @@ export async function runWithDBTDocker(
   // use platform linux/arm64 if on Apple Silicon
   const dockerArgsPlatform = isAppleSiliconMac() ? ['--platform', 'linux/amd64'] : [];
 
-  // Add --user $(id -u):$(id -g)
+  // Add --user $(id -u):$(id -g) and set HOME to /home/dbtuser
   const dockerArgs = [
     'run',
     '--rm',
@@ -60,16 +60,18 @@ export async function runWithDBTDocker(
     `type=bind,source=${dbtDir},target=/usr/app/dbt`,
     '--user',
     `${os.userInfo().uid}:${os.userInfo().gid}`,
+    '-e',
+    'HOME=/home/dbtuser',
   ];
   if (process.env.CI) {
-    //dockerArgs.push(...[`--mount`, `type=bind,readonly,source=${join(userHome, '.dbt')},target=/root/.dbt`])
+    //dockerArgs.push(...[`--mount`, `type=bind,readonly,source=${join(userHome, '.dbt')},target=/home/dbtuser/.dbt`])
   } else {
     dockerArgs.push(
       ...[
         `--mount`,
-        `type=bind,readonly,source=${join(userHome, '.dbt')},target=/root/.dbt`,
+        `type=bind,readonly,source=${join(userHome, '.dbt')},target=/home/dbtuser/.dbt`,
         `--mount`,
-        `type=bind,readonly,source=${join(userHome, '.config', 'gcloud')},target=/root/.config/gcloud`,
+        `type=bind,readonly,source=${join(userHome, '.config', 'gcloud')},target=/home/dbtuser/.config/gcloud`,
       ]
     );
   }
