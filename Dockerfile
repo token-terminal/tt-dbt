@@ -25,7 +25,8 @@ ENV PATH="/opt/venv/bin:${PATH}"
 RUN pip install --upgrade --no-cache-dir --no-compile \
         pip==24.0 setuptools==69.2.0 wheel==0.43.0 && \
     pip install --no-cache-dir --no-compile \
-        dbt-bigquery==1.10.0 \
+        dbt-core==1.12.0 \
+        dbt-bigquery==1.12.0 \
         sqlfluff==3.3.0 \
         sqlfluff-templater-dbt==3.3.0
 
