@@ -7,21 +7,7 @@ import Debug from "debug";
 const debug = Debug("tt-dbt:runwithdocker");
 
 // Define the Docker image to use, use major for now
-const dbtImage = `ghcr.io/token-terminal/tt-dbt:1.3.0`;
-
-function isAppleSiliconMac(): boolean {
-  const arch = os.arch();
-  const platform = os.platform();
-  const cpus = os.cpus();
-
-  // Check if the architecture is arm64 and platform is darwin (macOS)
-  if (arch === "arm64" && platform === "darwin") {
-    // Additional check for specific Apple Silicon CPUs
-    const isAppleSilicon = cpus.some((cpu) => cpu.model.includes("Apple"));
-    return isAppleSilicon;
-  }
-  return false;
-}
+const dbtImage = `ghcr.io/token-terminal/tt-dbt:1.4.0`;
 
 export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluff", _dbtDir: string) {
   const splitIndex = command === "dbt" ? 2 : 3;
@@ -44,8 +30,10 @@ export async function runWithDBTDocker(argv: string[], command: "dbt" | "sqlfluf
   const userHome = os.homedir();
   //console.log(`DbtDIR: ${dbtDir}, ${userHome}, argv: ${argv}`)
 
-  // use platform linux/arm64 if on Apple Silicon
-  const dockerArgsPlatform = isAppleSiliconMac() ? ["--platform", "linux/amd64"] : [];
+  // The image is multi-arch since 1.4.0, so Docker resolves the native
+  // platform from the manifest list. TT_DBT_PLATFORM (e.g. linux/amd64)
+  // remains as an escape hatch if an arch-specific issue ever comes up.
+  const dockerArgsPlatform = process.env.TT_DBT_PLATFORM ? ["--platform", process.env.TT_DBT_PLATFORM] : [];
 
   const dockerArgs = ["run", "--rm", "--network=host", `--mount`, `type=bind,source=${dbtDir},target=/usr/app/dbt`];
   if (process.env.CI) {

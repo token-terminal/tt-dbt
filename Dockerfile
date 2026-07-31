@@ -49,16 +49,13 @@ ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONIOENCODING=utf-8 \
     LANG=C.UTF-8
 
-# --- Minimal Google Cloud CLI (core + bq, no kubectl, no App Engine) ---
-RUN set -e; \
-    apt-get update && \
+# TLS roots + curl. The previous gcloud SDK block here was inert: it fetched
+# the x86_64 tarball and deleted the SDK inside the same RUN, so no gcloud or
+# bq binary ships in the image (verified against published 1.3.0). It was
+# also the only arch-specific step, so dropping it unblocks linux/arm64.
+RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
-    curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz && \
-    tar -xf google-cloud-cli-linux-x86_64.tar.gz && \
-    rm google-cloud-cli-linux-x86_64.tar.gz && \
-    /google-cloud-sdk/install.sh --quiet && \
-    rm -rf /google-cloud-sdk  /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy the prepared virtual‑env from the builder
 COPY --from=builder /opt/venv /opt/venv
