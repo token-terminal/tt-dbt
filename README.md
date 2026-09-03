@@ -4,15 +4,35 @@ Single binary DBT docker wrapper with Token Terminal configurations.
 
 ## Install
 
-1. Download binary from github releases and extract (eg. `gzip -d -N ./path/to/downloaded/file`) or build binary from source.
+The release assets are named `tt-dbt-<os>-<arch>-<version>.gz` but are gzipped
+**tar archives** containing a single `./tt-dbt` file — extract with `tar`, not
+`gzip -d` (the latter leaves you with a tar archive and `exec format error`).
 
-2. Add execution rights for the binary `chmod +x /path/to/extracted/binary`.
+1. Download the asset for your platform from [GitHub releases](https://github.com/token-terminal/tt-dbt/releases) and extract the binary:
 
-3. Add binary to PATH eg. `sudo mv /path/to/extracted/binary /usr/local/bin`
+   ```bash
+   tar -xzf tt-dbt-linux-x64-vX.Y.Z.gz        # -> ./tt-dbt
+   # or, in one go, straight into PATH:
+   tar -xzOf tt-dbt-linux-x64-vX.Y.Z.gz ./tt-dbt | sudo tee /usr/local/bin/tt-dbt >/dev/null
+   ```
 
-4. Run `tt-dbt test-installation`
+   Or build the binary from source (below).
 
-5. You can now run DBT with Token Terminal configuration in any DBT folder
+2. Add execution rights: `chmod +x tt-dbt` (or `sudo chmod +x /usr/local/bin/tt-dbt`).
+
+3. Put it on your PATH, eg. `sudo mv tt-dbt /usr/local/bin/`.
+
+4. Run `tt-dbt test-installation` (needs `gcloud` and `docker` — podman with the `podman-docker` shim works too).
+
+5. You can now run DBT with Token Terminal configuration in any DBT folder.
+
+Scripted latest-release install (Linux x64):
+
+```bash
+tag=$(curl -fsSL https://api.github.com/repos/token-terminal/tt-dbt/releases/latest | jq -r .tag_name)
+curl -fsSL "https://github.com/token-terminal/tt-dbt/releases/download/$tag/tt-dbt-linux-x64-$tag.gz" \
+  | tar -xzOf - ./tt-dbt | sudo tee /usr/local/bin/tt-dbt >/dev/null && sudo chmod +x /usr/local/bin/tt-dbt
+```
 
 ## Usage
 
